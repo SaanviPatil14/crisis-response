@@ -47,6 +47,13 @@ export default function StaffPage() {
 
   const [activeTab, setActiveTab] = useState("Alerts");
 
+  // --- NEW: AI MEDIC STATE ---
+  const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState([
+    { role: "ai", text: "CityGuard Medical AI online. State the nature of the injury." }
+  ]);
+  const [isTyping, setIsTyping] = useState(false);
+
   // 1. Auth & Alerts Subscription
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -184,7 +191,6 @@ export default function StaffPage() {
     await supabase.from('incidents').update({ status: 'RESOLVED' }).eq('id', incidentId);
   };
 
-  // THE GOD-MODE MOVEMENT SIMULATOR
   const simulateMovement = (incidentId) => {
     if (!officerLocation) return alert("Need GPS lock first!");
     
@@ -212,8 +218,48 @@ export default function StaffPage() {
     return `${Math.floor(seconds / 60)}M ${(seconds % 60).toString().padStart(2, '0')}S`;
   };
 
+  // --- NEW: GEMINI FETCH HANDLER ---
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    // Add user message to UI immediately
+    const userMsg = chatInput;
+    setChatHistory(prev => [...prev, { role: "user", text: userMsg }]);
+    setChatInput("");
+    setIsTyping(true);
+
+    // Grab dynamic context (is there an active ambulance to mention to Gemini?)
+    const activeIncident = activeIncidents[0];
+    let contextString = "No active ambulance assigned at this moment.";
+    if (activeIncident) {
+      const hospital = getAssignedHospital(activeIncident.id);
+      contextString = `Ambulance Unit ${hospital.unit} from ${hospital.name} is currently En Route.`;
+    }
+
+    try {
+      const res = await fetch('/api/medic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg, context: contextString })
+      });
+      
+      const data = await res.json();
+      if (data.reply) {
+        setChatHistory(prev => [...prev, { role: "ai", text: data.reply }]);
+      } else {
+        setChatHistory(prev => [...prev, { role: "ai", text: "ERROR: Received invalid response from Medical AI." }]);
+      }
+    } catch (error) {
+      setChatHistory(prev => [...prev, { role: "ai", text: "ERROR: Connection to Google AI Server lost." }]);
+    }
+    
+    setIsTyping(false);
+  };
+
   const navItems = [
     { id: "Alerts", icon: Bell },
+    { id: "Medic", icon: HeartPulse },
     { id: "Comm", icon: Radio },
     { id: "Map", icon: MapPin },
     { id: "Profile", icon: User },
@@ -414,6 +460,63 @@ export default function StaffPage() {
                       <p className="text-base text-emerald-600 mt-2 font-medium">No active incidents within the 5km geofence radius.</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* --- NEW: MEDIC TAB UI --- */}
+              {activeTab === "Medic" && (
+                <div className="flex flex-col h-full bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden shadow-sm max-w-2xl mx-auto pb-20 md:pb-0">
+                  {/* Chat Header */}
+                  <div className="bg-sky-600 p-4 flex items-center gap-3 text-white shrink-0">
+                    <div className="p-2 bg-white/20 rounded-full"><HeartPulse size={20} /></div>
+                    <div>
+                      <h3 className="font-black tracking-wide text-sm">CityGuard AI Medic</h3>
+                      <p className="text-[10px] text-sky-100 font-medium">Powered by Google Gemini 1.5</p>
+                    </div>
+                  </div>
+
+                  {/* Chat History */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {chatHistory.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${
+                          msg.role === 'user' 
+                            ? 'bg-slate-800 text-white rounded-br-none' 
+                            : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'
+                        }`}>
+                          {/* Parse newlines into breaks for bullet points */}
+                          {msg.text.split('\n').map((line, i) => <p key={i} className="mb-1">{line}</p>)}
+                        </div>
+                      </div>
+                    ))}
+                    {isTyping && (
+                      <div className="flex justify-start">
+                        <div className="bg-white border border-slate-200 text-slate-400 p-3 rounded-2xl rounded-bl-none text-xs font-bold animate-pulse">
+                          Google AI is analyzing...
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Chat Input Area */}
+                  <div className="p-4 bg-white border-t border-slate-200 shrink-0">
+                    <form onSubmit={handleSendMessage} className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder="E.g., How do I treat a deep laceration?" 
+                        className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sky-500 focus:bg-white transition-colors"
+                      />
+                      <button 
+                        type="submit" 
+                        disabled={isTyping || !chatInput.trim()}
+                        className="bg-sky-600 hover:bg-sky-500 text-white px-5 rounded-xl font-bold transition-colors disabled:opacity-50"
+                      >
+                        ASK
+                      </button>
+                    </form>
+                  </div>
                 </div>
               )}
 
