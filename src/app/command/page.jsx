@@ -233,7 +233,7 @@ export default function CommandPage() {
                 
                 return (
                   <AdvancedMarker key={a.id} position={pos} onClick={() => {setSelectedIncident(a); setNoteInput(a.notes || "");}}>
-                    <div className={`p-2 rounded-full border-2 shadow-xl z-20 transition-all duration-1000 ${
+                    <div className={`p-2 rounded-full border-2 shadow-xl z-20 ${
                       isMoving ? 'bg-blue-600 border-white shadow-[0_0_20px_rgba(37,99,235,0.8)]' : 
                       a.status === 'CODE_BLUE' ? 'bg-red-600 border-white animate-bounce' : 
                       'bg-orange-500 border-slate-900'
