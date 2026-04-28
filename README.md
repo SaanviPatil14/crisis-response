@@ -118,11 +118,6 @@ Live deployment:
 
 - `https://crisis-response-161593945002.europe-west1.run.app/`
 
-For Google Cloud Run, use:
-
-- [DEPLOY_CLOUD_RUN.md](/C:/Users/HARMEET/crisis-response/DEPLOY_CLOUD_RUN.md)
-- [cloudrun.build.env.yaml.example](/C:/Users/HARMEET/crisis-response/cloudrun.build.env.yaml.example)
-
 Important deployment split:
 
 - Build-time public env vars: Supabase URL, Supabase anon key, Google Maps key
