@@ -114,6 +114,9 @@ npm run lint
 ## Deployment
 
 This project is configured with `output: "standalone"` in [next.config.mjs](/C:/Users/HARMEET/crisis-response/next.config.mjs), which fits container deployment well.
+Live deployment:
+
+- `https://crisis-response-161593945002.europe-west1.run.app/`
 
 For Google Cloud Run, use:
 
